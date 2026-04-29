@@ -6,43 +6,54 @@
   <title>SDS リスクアセスメントツール</title>
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
-    body { font-family: 'Meiryo', sans-serif; background: #f5f5f5; color: #333; }
+    body {
+      font-family: 'Meiryo', sans-serif;
+      background: #f5f5f5; color: #333;
+      height: 100vh; display: flex; flex-direction: column;
+    }
 
     header {
       background: #1a56a0; color: #fff;
-      padding: 12px 24px;
-      font-size: 16px; font-weight: bold;
+      padding: 12px 20px; font-size: 16px; font-weight: bold;
+      flex-shrink: 0;
     }
 
-    main { max-width: 900px; margin: 32px auto; padding: 0 16px; }
-
-    .card {
-      background: #fff; border-radius: 6px;
-      box-shadow: 0 1px 4px rgba(0,0,0,.12);
-      padding: 24px; margin-bottom: 16px;
+    .layout {
+      display: flex; flex: 1; overflow: hidden; gap: 0;
     }
-    .card h2 { font-size: 14px; color: #555; margin-bottom: 12px; }
 
-    .search-row { display: flex; gap: 8px; }
+    /* ---- 左カラム（検索） ---- */
+    .sidebar {
+      width: 360px; flex-shrink: 0;
+      display: flex; flex-direction: column;
+      border-right: 1px solid #ddd;
+      background: #fff; overflow: hidden;
+    }
+    .sidebar-inner {
+      padding: 16px; overflow-y: auto; flex: 1;
+    }
+
+    .search-row { display: flex; gap: 8px; margin-bottom: 8px; }
     .search-row input {
-      flex: 1; padding: 8px 12px; font-size: 15px;
+      flex: 1; padding: 8px 10px; font-size: 14px;
       border: 1px solid #ccc; border-radius: 4px;
     }
     .btn {
-      padding: 8px 20px; font-size: 14px; cursor: pointer;
+      padding: 8px 16px; font-size: 13px; cursor: pointer;
       background: #1a56a0; color: #fff;
       border: none; border-radius: 4px; white-space: nowrap;
     }
+    .btn-sm { padding: 6px 12px; font-size: 12px; }
     .btn-outline {
-      background: #fff; color: #1a56a0;
-      border: 1px solid #1a56a0;
+      background: #fff; color: #1a56a0; border: 1px solid #1a56a0;
     }
     .btn:disabled { background: #aaa; cursor: default; }
 
-    #results { margin-top: 12px; }
+    #status { font-size: 12px; color: #888; margin-bottom: 4px; }
+
     .result-item {
-      padding: 10px 12px; border-bottom: 1px solid #eee;
-      cursor: pointer; font-size: 14px;
+      padding: 9px 10px; border-bottom: 1px solid #eee;
+      cursor: pointer; font-size: 13px;
       display: flex; align-items: center; gap: 8px;
     }
     .result-item:hover { background: #f0f6ff; }
@@ -50,81 +61,96 @@
     .badge {
       font-size: 11px; background: #e8e8e8;
       border-radius: 3px; padding: 1px 6px;
-      min-width: 24px; text-align: center;
+      min-width: 24px; text-align: center; flex-shrink: 0;
     }
 
-    /* プレビューセクション */
-    #previewSection { display: none; }
+    /* ---- 右カラム（プレビュー） ---- */
+    .preview-col {
+      flex: 1; display: none; flex-direction: column;
+      overflow: hidden; background: #f0f0f0;
+    }
+    .preview-col.visible { display: flex; }
 
     .preview-controls {
+      background: #fff; border-bottom: 1px solid #ddd;
+      padding: 10px 16px; flex-shrink: 0;
       display: flex; align-items: flex-end; gap: 12px; flex-wrap: wrap;
     }
     .selected-name {
-      font-size: 15px; font-weight: bold; color: #1a56a0;
+      font-size: 14px; font-weight: bold; color: #1a56a0;
+      flex: 1; min-width: 0; overflow: hidden;
+      text-overflow: ellipsis; white-space: nowrap;
     }
-    .form-group { display: flex; flex-direction: column; gap: 4px; }
-    .form-group label { font-size: 12px; color: #666; }
+    .form-group { display: flex; flex-direction: column; gap: 3px; }
+    .form-group label { font-size: 11px; color: #666; }
     .form-group input {
-      padding: 7px 10px; font-size: 14px;
-      border: 1px solid #ccc; border-radius: 4px; width: 180px;
+      padding: 6px 8px; font-size: 13px;
+      border: 1px solid #ccc; border-radius: 4px; width: 160px;
     }
     .btn-row { display: flex; gap: 8px; align-items: flex-end; }
 
     .preview-frame-wrap {
-      overflow: auto;
-      border: 1px solid #ccc; border-radius: 4px;
-      background: #e0e0e0;
-      max-height: 700px;
+      flex: 1; overflow: auto; padding: 12px;
     }
     #previewFrame {
-      width: 850px;
-      height: 2500px;
-      border: none;
-      display: block;
+      width: 850px; height: 2500px;
+      border: none; display: block;
+      background: #fff;
+      box-shadow: 0 2px 8px rgba(0,0,0,.2);
     }
 
-    #status { font-size: 13px; color: #888; margin-top: 8px; }
-    .hidden { display: none; }
+    .empty-preview {
+      flex: 1; display: flex; align-items: center; justify-content: center;
+      color: #bbb; font-size: 14px;
+    }
   </style>
 </head>
 <body>
 
 <header>SDS リスクアセスメントツール</header>
 
-<main>
-  <div class="card">
-    <h2>材料を検索</h2>
-    <div class="search-row">
-      <input type="text" id="searchInput" placeholder="材料名を入力（例：ファインウレタン）" />
-      <button class="btn" onclick="search()">検索</button>
+<div class="layout">
+
+  <!-- 左：検索 -->
+  <div class="sidebar">
+    <div class="sidebar-inner">
+      <div class="search-row">
+        <input type="text" id="searchInput" placeholder="材料名を入力（例：ファインウレタン）" />
+        <button class="btn" onclick="search()">検索</button>
+      </div>
+      <div id="status"></div>
+      <div id="results"></div>
     </div>
-    <div id="status"></div>
-    <div id="results"></div>
   </div>
 
-  <div id="previewSection">
-    <div class="card">
-      <div class="preview-controls">
-        <span id="selectedName" class="selected-name"></span>
-        <div class="form-group">
-          <label>実施者</label>
-          <input type="text" id="implementor" placeholder="氏名を入力" />
-        </div>
-        <div class="form-group">
-          <label>実施日</label>
-          <input type="date" id="date" />
-        </div>
-        <div class="btn-row">
-          <button class="btn btn-outline" onclick="updatePreview()">プレビュー更新</button>
-          <button class="btn" onclick="openReport()">印刷（新しいタブ）</button>
-        </div>
+  <!-- 右：プレビュー -->
+  <div class="preview-col" id="previewCol">
+    <div class="preview-controls" id="previewControls">
+      <span class="selected-name" id="selectedName"></span>
+      <div class="form-group">
+        <label>実施者</label>
+        <input type="text" id="implementor" placeholder="氏名を入力" />
+      </div>
+      <div class="form-group">
+        <label>実施日</label>
+        <input type="date" id="date" />
+      </div>
+      <div class="btn-row">
+        <button class="btn btn-sm btn-outline" onclick="updatePreview()">更新</button>
+        <button class="btn btn-sm" onclick="openReport()">印刷</button>
       </div>
     </div>
     <div class="preview-frame-wrap">
       <iframe id="previewFrame" src="about:blank"></iframe>
     </div>
   </div>
-</main>
+
+  <!-- プレビュー未選択時 -->
+  <div class="empty-preview" id="emptyPreview">
+    左の検索から材料を選択するとプレビューが表示されます
+  </div>
+
+</div>
 
 <script>
   let selectedId = null;
@@ -145,8 +171,6 @@
     if (!q) return;
     document.getElementById('status').textContent = '検索中...';
     document.getElementById('results').innerHTML = '';
-    document.getElementById('previewSection').style.display = 'none';
-    selectedId = null;
 
     google.script.run
       .withSuccessHandler(renderResults)
@@ -159,13 +183,11 @@
   function renderResults(items) {
     const status  = document.getElementById('status');
     const results = document.getElementById('results');
-
     if (!items || items.length === 0) {
       status.textContent = '該当する材料が見つかりませんでした';
       return;
     }
     status.textContent = `${items.length}件見つかりました`;
-
     results.innerHTML = items.map(item => `
       <div class="result-item" onclick="select(${item.material_id}, '${escHtml(item.材料名)}')">
         <span class="badge">${escHtml(item.頭文字 || '')}</span>
@@ -178,11 +200,9 @@
     selectedId = id;
     document.querySelectorAll('.result-item').forEach(el => el.classList.remove('selected'));
     event.currentTarget.classList.add('selected');
-
     document.getElementById('selectedName').textContent = name;
-    document.getElementById('previewSection').style.display = 'block';
-    document.getElementById('previewSection').scrollIntoView({ behavior: 'smooth' });
-
+    document.getElementById('previewCol').classList.add('visible');
+    document.getElementById('emptyPreview').style.display = 'none';
     updatePreview();
   }
 
@@ -210,10 +230,8 @@
 
   function escHtml(str) {
     return String(str)
-      .replace(/&/g, '&amp;')
-      .replace(/</g, '&lt;')
-      .replace(/>/g, '&gt;')
-      .replace(/"/g, '&quot;');
+      .replace(/&/g, '&amp;').replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;').replace(/"/g, '&quot;');
   }
 </script>
 
