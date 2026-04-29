@@ -141,7 +141,10 @@
       </div>
     </div>
     <div class="preview-frame-wrap">
-      <iframe id="previewFrame" src="about:blank"></iframe>
+      <div id="previewLoading" style="display:none; padding:40px; text-align:center; color:#888; font-size:13px;">
+        読み込み中...（GHS画像の取得に数秒かかります）
+      </div>
+      <iframe id="previewFrame"></iframe>
     </div>
   </div>
 
@@ -154,7 +157,7 @@
 
 <script>
   let selectedId = null;
-  let scriptUrl  = '';
+  let scriptUrl  = '';  // 印刷タブ用
 
   google.script.run
     .withSuccessHandler(url => { scriptUrl = url; })
@@ -207,13 +210,26 @@
   }
 
   function updatePreview() {
-    if (!selectedId || !scriptUrl) return;
+    if (!selectedId) return;
     const implementor = document.getElementById('implementor').value;
     const date        = document.getElementById('date').value;
-    const url = `${scriptUrl}?page=report&id=${selectedId}`
-      + `&implementor=${encodeURIComponent(implementor)}`
-      + `&date=${encodeURIComponent(date)}`;
-    document.getElementById('previewFrame').src = url;
+    const frame   = document.getElementById('previewFrame');
+    const loading = document.getElementById('previewLoading');
+    frame.style.display   = 'none';
+    loading.style.display = 'block';
+    google.script.run
+      .withSuccessHandler(html => {
+        loading.style.display = 'none';
+        frame.srcdoc          = html;
+        frame.style.display   = 'block';
+      })
+      .withFailureHandler(err => {
+        loading.style.display    = 'none';
+        loading.textContent      = 'エラー: ' + err.message;
+        loading.style.display    = 'block';
+        loading.style.color      = 'red';
+      })
+      .getReportHtml(selectedId, implementor, date);
   }
 
   function openReport() {

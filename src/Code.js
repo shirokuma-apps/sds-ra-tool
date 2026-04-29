@@ -23,14 +23,19 @@ function _getGhsImages() {
   return result;
 }
 
+function _buildReportTemplate(id, implementor, date) {
+  const template = HtmlService.createTemplateFromFile('templates/report');
+  template.data        = DbService.getMaterialData(Number(id));
+  template.implementor = implementor || '';
+  template.date        = date        || '';
+  template.ghsImages   = _getGhsImages();
+  return template;
+}
+
 function doGet(e) {
   if (e.parameter.page === 'report') {
-    const template = HtmlService.createTemplateFromFile('templates/report');
-    template.data        = DbService.getMaterialData(Number(e.parameter.id));
-    template.implementor = e.parameter.implementor || '';
-    template.date        = e.parameter.date        || '';
-    template.ghsImages   = _getGhsImages();
-    return template.evaluate()
+    return _buildReportTemplate(e.parameter.id, e.parameter.implementor, e.parameter.date)
+      .evaluate()
       .setTitle('リスクアセスメント')
       .setSandboxMode(HtmlService.SandboxMode.IFRAME)
       .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
@@ -40,6 +45,11 @@ function doGet(e) {
     .setTitle('SDS リスクアセスメントツール')
     .setSandboxMode(HtmlService.SandboxMode.IFRAME)
     .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
+}
+
+// インラインプレビュー用: HTMLを文字列で返す
+function getReportHtml(id, implementor, date) {
+  return _buildReportTemplate(id, implementor, date).evaluate().getContent();
 }
 
 function searchMaterials(query) {
