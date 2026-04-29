@@ -376,18 +376,7 @@ const D = <?!= JSON.stringify({
   date: date,
 }) ?>;
 
-// Drive ファイルID（/d/★★★/viewの★★★部分）
-const GHS_IDS = {
-  GHS_可燃:  '1Favhb1bHxeJWUnTvciGY9zi6cHVS1njg',
-  GHS_支燃:  '1TY-oJv3bX39o1bQ22N-wbvquviKw5-lH',
-  GHS_爆発:  '10aIntelf0sNfEl53DtJ1K14EERU35Wkb',
-  GHS_腐食:  '1gZCsrJ1e6VxLR-0mLH_8H0raFPmZkJ2p',
-  GHS_ガス:  '1UGjTbzgx7EMvSO2sKoJPSPi8EwzPFAol',
-  GHS_毒性1: '1A-XtOEIGYQEt2zGNgB8irYF_-S45a0lM',
-  GHS_毒性2: '1y3he2DP-rgy2yXBo5g-MPuPrm_rOD83n',
-  GHS_環境:  '1LWjeEBez6vGQH27EimS1Kc-sDN19CkMR',
-  GHS_臓器:  '1rZyP7XEqKE7JyS1VSH6RcQ7_CM5VvCuh',
-};
+const GHS_IMAGES = <?!= JSON.stringify(ghsImages) ?>;
 const GHS_INFO = [
   { flag:'GHS_可燃',  lbl:'【炎】可燃性/引火性ガス\n引火性液体 可燃性固体\n自己反応性化学品など' },
   { flag:'GHS_支燃',  lbl:'【円上の炎】支燃性/酸化性ガス\n酸化性液体・固体' },
@@ -442,11 +431,11 @@ const GHS_INFO = [
   GHS_INFO.forEach(item => {
     const s = String(m[item.flag] ?? '').trim().toLowerCase();
     const isOn = s !== '' && s !== '0' && s !== 'false' && s !== 'no';
-    const id   = GHS_IDS[item.flag];
+    const src  = GHS_IMAGES[item.flag];
     const div  = document.createElement('div');
     div.className = 'ghs-item' + (isOn ? '' : ' off');
-    const img = id
-      ? `<img src="https://lh3.googleusercontent.com/d/${id}" alt="${item.flag}">`
+    const img = src
+      ? `<img src="${src}" alt="${item.flag}">`
       : `<div class="ghs-ph">${item.flag.replace('GHS_','')}</div>`;
     div.innerHTML = img + `<div class="ghs-lbl">${item.lbl.replace(/\n/g,'<br>')}</div>`;
     grid.appendChild(div);
