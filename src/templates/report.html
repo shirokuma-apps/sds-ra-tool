@@ -429,8 +429,7 @@ const GHS_INFO = [
   // GHSグリッド
   const grid = document.getElementById('ghsGrid');
   GHS_INFO.forEach(item => {
-    const v = String(m[item.flag] ?? '').trim();
-    const isOn = v === '○' || v === '1' || v.toLowerCase() === 'true';
+    const isOn = m[item.flag] === 1 || m[item.flag] === true;
     const src  = GHS_IMAGES[item.flag];
     const div  = document.createElement('div');
     div.className = 'ghs-item' + (isOn ? '' : ' off');

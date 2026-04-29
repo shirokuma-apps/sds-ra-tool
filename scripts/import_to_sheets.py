@@ -17,6 +17,10 @@ import gspread
 import pandas as pd
 from pathlib import Path
 import time
+import sys
+import io
+
+sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8')
 
 SPREADSHEET_ID = '1wiMXoDid6Z0RWVEHwTQd3fDnHMQ-SWqHxaxt_ytw3vA'
 EXCEL_FILE     = 'data/SDS情報DB_正規化.xlsx'

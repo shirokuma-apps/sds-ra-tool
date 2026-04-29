@@ -43,6 +43,18 @@ def get_num(row, col):
     except (ValueError, TypeError):
         return None
 
+def get_flag(row, col):
+    """GHSフラグ列を 1/0 に正規化する。
+    空セル・✕系 → 0、それ以外（○系）→ 1。
+    ○の文字コード違い（U+25CB/U+25EF等）に依存しないよう否定側で判定する。
+    """
+    v = get(row, col)
+    if v is None:
+        return 0
+    if v.lower() in ('✕', '✗', '×', 'x', '0', '0.0', 'false', 'no', '-'):
+        return 0
+    return 1
+
 # ---------------------------------------------------------------------------
 # 2. 定数定義
 # ---------------------------------------------------------------------------
@@ -121,15 +133,15 @@ for _, row in data_rows.iterrows():
         'material_id':    mid,
         '頭文字':         get(row, 1),
         '材料名':         mat_name,
-        'GHS_可燃':       get(row, 3),
-        'GHS_支燃':       get(row, 4),
-        'GHS_爆発':       get(row, 5),
-        'GHS_腐食':       get(row, 6),
-        'GHS_ガス':       get(row, 7),
-        'GHS_毒性1':      get(row, 8),
-        'GHS_毒性2':      get(row, 9),
-        'GHS_環境':       get(row, 10),
-        'GHS_臓器':       get(row, 11),
+        'GHS_可燃':       get_flag(row, 3),
+        'GHS_支燃':       get_flag(row, 4),
+        'GHS_爆発':       get_flag(row, 5),
+        'GHS_腐食':       get_flag(row, 6),
+        'GHS_ガス':       get_flag(row, 7),
+        'GHS_毒性1':      get_flag(row, 8),
+        'GHS_毒性2':      get_flag(row, 9),
+        'GHS_環境':       get_flag(row, 10),
+        'GHS_臓器':       get_flag(row, 11),
         '見積もったリスク': get_num(row, 61),
         '要変更':         get(row, 228),
         '特化則':         get(row, 229),
