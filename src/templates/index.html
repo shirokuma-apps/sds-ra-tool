@@ -14,14 +14,13 @@
       font-size: 16px; font-weight: bold;
     }
 
-    main { max-width: 800px; margin: 32px auto; padding: 0 16px; }
+    main { max-width: 900px; margin: 32px auto; padding: 0 16px; }
 
     .card {
       background: #fff; border-radius: 6px;
       box-shadow: 0 1px 4px rgba(0,0,0,.12);
-      padding: 24px; margin-bottom: 20px;
+      padding: 24px; margin-bottom: 16px;
     }
-
     .card h2 { font-size: 14px; color: #555; margin-bottom: 12px; }
 
     .search-row { display: flex; gap: 8px; }
@@ -29,16 +28,16 @@
       flex: 1; padding: 8px 12px; font-size: 15px;
       border: 1px solid #ccc; border-radius: 4px;
     }
-    .search-row button, .btn {
+    .btn {
       padding: 8px 20px; font-size: 14px; cursor: pointer;
       background: #1a56a0; color: #fff;
-      border: none; border-radius: 4px;
+      border: none; border-radius: 4px; white-space: nowrap;
     }
-    .btn:disabled { background: #aaa; cursor: default; }
     .btn-outline {
       background: #fff; color: #1a56a0;
       border: 1px solid #1a56a0;
     }
+    .btn:disabled { background: #aaa; cursor: default; }
 
     #results { margin-top: 12px; }
     .result-item {
@@ -54,21 +53,38 @@
       min-width: 24px; text-align: center;
     }
 
-    .form-row { display: flex; gap: 16px; flex-wrap: wrap; margin-bottom: 12px; }
-    .form-group { display: flex; flex-direction: column; gap: 4px; flex: 1; min-width: 180px; }
-    .form-group label { font-size: 12px; color: #666; }
-    .form-group input {
-      padding: 8px; font-size: 14px;
-      border: 1px solid #ccc; border-radius: 4px;
-    }
+    /* プレビューセクション */
+    #previewSection { display: none; }
 
+    .preview-controls {
+      display: flex; align-items: flex-end; gap: 12px; flex-wrap: wrap;
+    }
     .selected-name {
       font-size: 15px; font-weight: bold; color: #1a56a0;
-      background: #f0f6ff; border-radius: 4px;
-      padding: 10px 12px; margin-bottom: 16px;
     }
-    .hidden { display: none; }
+    .form-group { display: flex; flex-direction: column; gap: 4px; }
+    .form-group label { font-size: 12px; color: #666; }
+    .form-group input {
+      padding: 7px 10px; font-size: 14px;
+      border: 1px solid #ccc; border-radius: 4px; width: 180px;
+    }
+    .btn-row { display: flex; gap: 8px; align-items: flex-end; }
+
+    .preview-frame-wrap {
+      overflow: auto;
+      border: 1px solid #ccc; border-radius: 4px;
+      background: #e0e0e0;
+      max-height: 700px;
+    }
+    #previewFrame {
+      width: 850px;
+      height: 2500px;
+      border: none;
+      display: block;
+    }
+
     #status { font-size: 13px; color: #888; margin-top: 8px; }
+    .hidden { display: none; }
   </style>
 </head>
 <body>
@@ -80,42 +96,46 @@
     <h2>材料を検索</h2>
     <div class="search-row">
       <input type="text" id="searchInput" placeholder="材料名を入力（例：ファインウレタン）" />
-      <button onclick="search()">検索</button>
+      <button class="btn" onclick="search()">検索</button>
     </div>
     <div id="status"></div>
     <div id="results"></div>
   </div>
 
-  <div class="card hidden" id="pdfCard">
-    <h2>PDF生成</h2>
-    <div class="selected-name" id="selectedName"></div>
-    <div class="form-row">
-      <div class="form-group">
-        <label>実施者</label>
-        <input type="text" id="implementor" placeholder="氏名を入力" />
-      </div>
-      <div class="form-group">
-        <label>実施日</label>
-        <input type="date" id="date" />
+  <div id="previewSection">
+    <div class="card">
+      <div class="preview-controls">
+        <span id="selectedName" class="selected-name"></span>
+        <div class="form-group">
+          <label>実施者</label>
+          <input type="text" id="implementor" placeholder="氏名を入力" />
+        </div>
+        <div class="form-group">
+          <label>実施日</label>
+          <input type="date" id="date" />
+        </div>
+        <div class="btn-row">
+          <button class="btn btn-outline" onclick="updatePreview()">プレビュー更新</button>
+          <button class="btn" onclick="openReport()">印刷（新しいタブ）</button>
+        </div>
       </div>
     </div>
-    <button class="btn" onclick="openReport()">PDF生成（印刷画面を開く）</button>
+    <div class="preview-frame-wrap">
+      <iframe id="previewFrame" src="about:blank"></iframe>
+    </div>
   </div>
 </main>
 
 <script>
-  let selectedId   = null;
-  let scriptUrl    = '';
+  let selectedId = null;
+  let scriptUrl  = '';
 
-  // スクリプトURLを取得（初回のみ）
   google.script.run
     .withSuccessHandler(url => { scriptUrl = url; })
     .getScriptUrl();
 
-  // 今日の日付をデフォルトにセット
   document.getElementById('date').value = new Date().toISOString().slice(0, 10);
 
-  // Enterキーで検索
   document.getElementById('searchInput').addEventListener('keydown', e => {
     if (e.key === 'Enter') search();
   });
@@ -125,7 +145,8 @@
     if (!q) return;
     document.getElementById('status').textContent = '検索中...';
     document.getElementById('results').innerHTML = '';
-    hidePdfCard();
+    document.getElementById('previewSection').style.display = 'none';
+    selectedId = null;
 
     google.script.run
       .withSuccessHandler(renderResults)
@@ -157,14 +178,22 @@
     selectedId = id;
     document.querySelectorAll('.result-item').forEach(el => el.classList.remove('selected'));
     event.currentTarget.classList.add('selected');
+
     document.getElementById('selectedName').textContent = name;
-    document.getElementById('pdfCard').classList.remove('hidden');
-    document.getElementById('pdfCard').scrollIntoView({ behavior: 'smooth' });
+    document.getElementById('previewSection').style.display = 'block';
+    document.getElementById('previewSection').scrollIntoView({ behavior: 'smooth' });
+
+    updatePreview();
   }
 
-  function hidePdfCard() {
-    selectedId = null;
-    document.getElementById('pdfCard').classList.add('hidden');
+  function updatePreview() {
+    if (!selectedId || !scriptUrl) return;
+    const implementor = document.getElementById('implementor').value;
+    const date        = document.getElementById('date').value;
+    const url = `${scriptUrl}?page=report&id=${selectedId}`
+      + `&implementor=${encodeURIComponent(implementor)}`
+      + `&date=${encodeURIComponent(date)}`;
+    document.getElementById('previewFrame').src = url;
   }
 
   function openReport() {

@@ -6,7 +6,8 @@ function doGet(e) {
     template.date        = e.parameter.date        || '';
     return template.evaluate()
       .setTitle('リスクアセスメント')
-      .setSandboxMode(HtmlService.SandboxMode.IFRAME);
+      .setSandboxMode(HtmlService.SandboxMode.IFRAME)
+      .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
   }
 
   return HtmlService.createHtmlOutputFromFile('templates/index')
