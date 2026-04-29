@@ -445,7 +445,7 @@ const GHS_INFO = [
     const div  = document.createElement('div');
     div.className = 'ghs-item' + (isOn ? '' : ' off');
     const img = id
-      ? `<img src="https://drive.google.com/uc?export=view&id=${id}" alt="${item.flag}">`
+      ? `<img src="https://lh3.googleusercontent.com/d/${id}" alt="${item.flag}">`
       : `<div class="ghs-ph">${item.flag.replace('GHS_','')}</div>`;
     div.innerHTML = img + `<div class="ghs-lbl">${item.lbl.replace(/\n/g,'<br>')}</div>`;
     grid.appendChild(div);
