@@ -15,40 +15,41 @@
 | # | タスク | ステータス | メモ |
 |---|---|---|---|
 | 1 | Google Spreadsheet のシート構成を設計 | ✅ | 11シート構成に確定 |
-| 2 | normalize_sds_reference.py を新設計に合わせて更新 | ✅ | |
+| 2 | normalize_sds_reference.py を新設計に合わせて更新 | ✅ | GHSフラグを1/0整数に正規化（get_flag追加） |
 | 3 | 新設計でSDS情報DB_正規化.xlsx を再生成 | ✅ | 化学物質483件、有害性67件にユニーク化 |
-| 4 | Google Spreadsheet を作成しデータをインポート | ✅ | gspread で11シート一括インポート |
+| 4 | Google Spreadsheet を作成しデータをインポート | ✅ | GHSフラグ1/0化後に再インポート済み（894材料） |
 
 ### 環境・インフラ
 
 | # | タスク | ステータス | メモ |
 |---|---|---|---|
-| 5 | GitHubリポジトリ作成・初回push | ⬜ | リポジトリ名: `sds-ra-tool` |
+| 5 | GitHubリポジトリ作成・初回push | ✅ | shirokuma-apps/sds-ra-tool |
 | 6 | clasp セットアップ・GASプロジェクト作成 | ✅ | TypeScript非対応のためJSで実装 |
 | 7 | package.json 作成 | ✅ | |
 | 7a | スクリプトプロパティに SPREADSHEET_ID を設定 | ✅ | |
-| 7b | GAS Web App デプロイ | ✅ | |
+| 7b | GAS Web App デプロイ | ✅ | 開発中は /dev URL を使用 |
+| 7c | CLAUDE.md 作成 | ✅ | 技術スタック・制約・コマンドを記載 |
 
 ### バックエンド（GAS）
 
 | # | タスク | ステータス | メモ |
 |---|---|---|---|
-| 8 | src/Code.js（doGet） | ✅ | |
+| 8 | src/Code.js（doGet） | ✅ | getReportHtml()追加（srcdocプレビュー用） |
 | 9 | src/db.js（Spreadsheet操作・材料検索） | ✅ | |
 
 ### フロントエンド
 
 | # | タスク | ステータス | メモ |
 |---|---|---|---|
-| 10 | src/templates/index.html（検索画面） | ✅ | |
-| 11 | src/templates/report.html（PDFテンプレート） | ✅ | CSS @media print |
-| 12 | GHSアイコン画像を Google Drive にアップロード | ⬜ | 公開URLを report.html の GHS_IMAGE_BASE_URL に設定 |
+| 10 | src/templates/index.html（検索画面） | ✅ | 左右横並びレイアウト、インラインプレビュー対応 |
+| 11 | src/templates/report.html（PDFテンプレート） | ✅ | 元のPDFレイアウトに準拠、GHS表示対応 |
+| 12 | GHSアイコン画像を Google Drive にアップロード | ✅ | GAS経由でbase64埋め込み（DriveApp使用） |
 
 ### 品質確認
 
 | # | タスク | ステータス | メモ |
 |---|---|---|---|
-| 13 | E2E動作確認（検索→選択→PDF生成→印刷） | ✅ | MVP動作確認済み |
+| 13 | E2E動作確認（検索→選択→PDF生成→印刷） | 🔄 | GHSラベル表示の最終確認が必要 |
 | 14 | 竹林さんにURLを共有して確認 | ⬜ | |
 
 ---
@@ -65,6 +66,10 @@
 | 2026-04-29 | GHS_BOX1〜9列を廃止 | 冗長設計。GHSフラグ列（GHS_可燃〜GHS_臓器）のみで制御する |
 | 2026-04-29 | claspのTypeScript非対応を確認 | claspがTSをコンパイルせず生のまま送るためJSで実装 |
 | 2026-04-29 | Step 1 MVP 動作確認完了 | 検索→選択→PDF生成の一連フローが動作 |
+| 2026-04-29 | report.htmlを元のPDFレイアウトに合わせて全面リライト | 原本との差異が大きすぎたため |
+| 2026-04-29 | GHS画像をGAS経由のbase64埋め込みに変更 | Drive公開URLはGAS IFRAMEでアクセス権エラーが発生するため |
+| 2026-04-29 | インラインプレビューをsrcdoc方式に変更 | iframeへのURL渡しは/dev認証がiframe内で通らないため |
+| 2026-04-29 | GHSフラグを○/✕から1/0整数に正規化 | ○の文字コード違い(U+25CB/U+25EF)で判定が壊れていたため |
 
 ---
 
@@ -76,3 +81,4 @@
 | 認証機能 | ログイン不要か、簡易認証か | Step 2移行時 |
 | SDS AI解析 | Claude API使用、レビューUIの設計 | Step 2 |
 | 費用負担 | API費用の分担方法 | Step 2移行時 |
+| 許容濃度の競合34件 | 非nullを優先で保留中 | Step 2でAI再解析時に修正 |
