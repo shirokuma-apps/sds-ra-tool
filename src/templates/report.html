@@ -1,0 +1,385 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <title>化学物質リスクアセスメント</title>
+  <style>
+    /* ============================================================
+       画面表示
+    ============================================================ */
+    body {
+      font-family: 'Meiryo', 'MS Gothic', sans-serif;
+      font-size: 11px; color: #000;
+      margin: 0; padding: 16px;
+      background: #f0f0f0;
+    }
+    .print-btn {
+      position: fixed; top: 12px; right: 12px; z-index: 999;
+      padding: 8px 20px; background: #1a56a0; color: #fff;
+      border: none; border-radius: 4px; cursor: pointer; font-size: 14px;
+    }
+    .page {
+      width: 210mm; min-height: 297mm;
+      background: #fff; margin: 0 auto 16px;
+      padding: 10mm 12mm;
+      box-shadow: 0 2px 8px rgba(0,0,0,.2);
+    }
+
+    /* ============================================================
+       印刷
+    ============================================================ */
+    @media print {
+      @page { size: A4 portrait; margin: 10mm 12mm; }
+      body { background: #fff; padding: 0; }
+      .print-btn { display: none; }
+      .page { box-shadow: none; margin: 0; width: 100%; min-height: unset; padding: 0; }
+      .page-break { page-break-before: always; }
+    }
+
+    /* ============================================================
+       共通レイアウト
+    ============================================================ */
+    h1 {
+      font-size: 13px; text-align: center; font-weight: bold;
+      border: 2px solid #000; padding: 4px; margin-bottom: 6px;
+    }
+    .meta-row {
+      display: flex; gap: 4px; margin-bottom: 6px; font-size: 10px;
+    }
+    .meta-row .field {
+      border: 1px solid #000; padding: 2px 6px;
+      flex: 1; min-width: 80px;
+    }
+    .meta-row .field span { border-bottom: 1px solid #666; display: inline-block; min-width: 80px; }
+
+    .step { margin-bottom: 6px; }
+    .step-header {
+      background: #c0c0c0; font-weight: bold;
+      padding: 2px 6px; font-size: 11px;
+      border: 1px solid #000; border-bottom: none;
+    }
+    .step-body {
+      border: 1px solid #000; padding: 4px 6px;
+      min-height: 20px;
+    }
+
+    table {
+      width: 100%; border-collapse: collapse; font-size: 10px;
+    }
+    th, td {
+      border: 1px solid #000; padding: 2px 4px;
+      vertical-align: top; text-align: left;
+    }
+    th { background: #ddd; text-align: center; font-weight: bold; }
+
+    /* GHS アイコン */
+    .ghs-row {
+      display: flex; flex-wrap: wrap; gap: 4px;
+      padding: 4px;
+    }
+    .ghs-icon {
+      width: 18mm; text-align: center; font-size: 9px;
+    }
+    .ghs-icon img { width: 16mm; height: 16mm; display: block; margin: 0 auto 2px; }
+    .ghs-icon.off { opacity: 0; }
+
+    /* リスクマトリックス */
+    .matrix td { text-align: center; width: 16%; }
+    .risk-high   { background: #ff6b6b; }
+    .risk-mid    { background: #ffd93d; }
+    .risk-low    { background: #6bcb77; }
+    .risk-active { outline: 3px solid #000; font-weight: bold; }
+
+    .two-col { display: flex; gap: 6px; }
+    .two-col > * { flex: 1; }
+
+    ul { margin: 0; padding-left: 16px; }
+    li { margin-bottom: 2px; }
+
+    .category-label { font-weight: bold; margin-top: 4px; }
+
+    /* ============================================================
+       判定ヘルパー（GASテンプレート変数）
+    ============================================================ */
+    /* ※ アイコン表示制御は JS で行う */
+  </style>
+</head>
+<body>
+
+<button class="print-btn" onclick="window.print()">印刷 / PDF保存</button>
+
+<!-- ============================================================
+     表面（Page 1）
+============================================================ -->
+<div class="page">
+  <h1>化学物質リスクアセスメント</h1>
+
+  <!-- メタ情報 -->
+  <div class="meta-row">
+    <div class="field">会社名：<span>鈴木興業株式会社</span></div>
+    <div class="field">実施者：<span><?= implementor ?></span></div>
+    <div class="field">実施日：<span><?= date ?></span></div>
+  </div>
+
+  <!-- STEP 1 -->
+  <div class="step">
+    <div class="step-header">STEP 1　業務の内容</div>
+    <div class="step-body"><?= data.material['材料名'] ?></div>
+  </div>
+
+  <!-- GHS 絵表示 -->
+  <div class="step">
+    <div class="step-header">GHS 危険有害性絵表示</div>
+    <div class="step-body">
+      <div class="ghs-row" id="ghsRow"></div>
+    </div>
+  </div>
+
+  <!-- STEP 2 -->
+  <div class="step">
+    <div class="step-header">STEP 2　化学物質の名称・含有率</div>
+    <div class="step-body">
+      <table>
+        <tr>
+          <th style="width:35%">化学物質名</th>
+          <th style="width:15%">含有率 (%)</th>
+          <th style="width:20%">推定濃度（長時間）</th>
+          <th style="width:20%">推定濃度（短時間）</th>
+          <th style="width:10%">許容濃度</th>
+        </tr>
+        <? for (var i = 0; i < data.chemicals.length; i++) { var c = data.chemicals[i]; ?>
+        <tr>
+          <td><?= c['化学物質名'] ?></td>
+          <td style="text-align:center">
+            <? if (c['含有率最小'] || c['含有率最大']) { ?>
+              <?= c['含有率最小'] || '' ?> 〜 <?= c['含有率最大'] || '' ?>
+            <? } ?>
+          </td>
+          <td style="text-align:center"><?= c['推定濃度_長時間'] || '' ?></td>
+          <td style="text-align:center"><?= c['推定濃度_短時間'] || '' ?></td>
+          <td style="text-align:center"><?= c['許容濃度'] || '' ?></td>
+        </tr>
+        <? } ?>
+      </table>
+    </div>
+  </div>
+
+  <!-- STEP 3 -->
+  <div class="step">
+    <div class="step-header">STEP 3　リスクアセスメント結果</div>
+    <div class="step-body">
+      <div class="two-col">
+        <!-- 有害性リスト -->
+        <div>
+          <div style="font-weight:bold;margin-bottom:4px">特定した有害性</div>
+          <ul>
+            <? for (var i = 0; i < data.hazards.length; i++) { ?>
+            <li><?= data.hazards[i]['有害性内容'] ?></li>
+            <? } ?>
+          </ul>
+        </div>
+        <!-- リスクマトリックス -->
+        <div>
+          <div style="font-weight:bold;margin-bottom:4px">リスクマトリックス</div>
+          <table class="matrix">
+            <tr>
+              <th>重篤度＼発生可能性</th><th>ほとんどない</th><th>ときどきある</th><th>頻繁にある</th>
+            </tr>
+            <tr>
+              <th>軽微（1）</th>
+              <td class="risk-low">1</td><td class="risk-low">2</td><td class="risk-mid">3</td>
+            </tr>
+            <tr>
+              <th>中程度（2）</th>
+              <td class="risk-low">2</td><td class="risk-mid">4</td><td class="risk-high">6</td>
+            </tr>
+            <tr>
+              <th>重大（3）</th>
+              <td class="risk-mid">3</td><td class="risk-high">6</td><td class="risk-high">9</td>
+            </tr>
+          </table>
+          <div style="margin-top:4px">
+            見積もったリスク：<strong><?= data.material['見積もったリスク'] || '―' ?></strong>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- STEP 4 -->
+  <div class="step">
+    <div class="step-header">STEP 4　リスク低減措置の内容</div>
+    <div class="step-body">
+      <table>
+        <? for (var i = 0; i < data.riskReductions.length; i++) { var r = data.riskReductions[i]; ?>
+        <tr>
+          <td style="width:20px;text-align:center;font-weight:bold"><?= r['記号'] ?></td>
+          <td><?= r['内容'] ?></td>
+        </tr>
+        <? } ?>
+      </table>
+    </div>
+  </div>
+
+  <!-- STEP 5 -->
+  <div class="step">
+    <div class="step-header">STEP 5　周知方法</div>
+    <div class="step-body">
+      作業者へのツールボックスミーティング、SDS・ラベルの掲示による周知を実施する。
+    </div>
+  </div>
+</div>
+
+<!-- ============================================================
+     裏面（Page 2）
+============================================================ -->
+<div class="page page-break">
+  <h1>化学物質リスクアセスメント（裏面）</h1>
+
+  <!-- STEP 6 保護具 -->
+  <div class="step">
+    <div class="step-header">STEP 6　保護具</div>
+    <div class="step-body">
+      <table>
+        <tr><th style="width:15%">保護部位</th><th>使用する保護具</th></tr>
+        <? for (var i = 0; i < data.protectiveEquip.length; i++) { var p = data.protectiveEquip[i]; ?>
+        <tr><td style="text-align:center"><?= p['保護部位'] ?></td><td><?= p['内容'] ?></td></tr>
+        <? } ?>
+      </table>
+    </div>
+  </div>
+
+  <!-- STEP 7 応急処置 -->
+  <div class="step">
+    <div class="step-header">STEP 7　応急処置</div>
+    <div class="step-body">
+      <? var categories = ['吸入','皮膚付着','眼','飲み込んだ場合','応急措置者の保護']; ?>
+      <? for (var ci = 0; ci < categories.length; ci++) { ?>
+      <?   var cat = categories[ci]; ?>
+      <?   var items = data.firstAids.filter(function(r){ return r['カテゴリ'] === cat; }); ?>
+      <? if (items.length > 0) { ?>
+      <div class="category-label">【<?= cat ?>】</div>
+      <ul>
+        <? for (var i = 0; i < items.length; i++) { ?>
+        <li><?= items[i]['内容'] ?></li>
+        <? } ?>
+      </ul>
+      <? } } ?>
+    </div>
+  </div>
+
+  <!-- STEP 8 緊急対応 -->
+  <div class="step">
+    <div class="step-header">STEP 8　緊急対応</div>
+    <div class="step-body">
+
+      <!-- 消火剤 -->
+      <div style="font-weight:bold;margin-bottom:4px">消火剤</div>
+      <table>
+        <tr>
+          <? for (var i = 0; i < data.fireAgents.length; i++) { ?>
+          <th style="font-size:9px"><?= data.fireAgents[i]['消火剤種別'] ?></th>
+          <? } ?>
+        </tr>
+        <tr>
+          <? for (var i = 0; i < data.fireAgents.length; i++) { ?>
+          <td style="text-align:center"><?= data.fireAgents[i]['適否'] ?></td>
+          <? } ?>
+        </tr>
+      </table>
+
+      <!-- 消火方法 -->
+      <div style="font-weight:bold;margin:6px 0 4px">消火方法</div>
+      <ul>
+        <? for (var i = 0; i < data.fireMethods.length; i++) { ?>
+        <li><?= data.fireMethods[i]['内容'] ?></li>
+        <? } ?>
+      </ul>
+
+      <!-- 漏出時措置 -->
+      <div style="font-weight:bold;margin:6px 0 4px">漏出時措置</div>
+      <? var spillCats = ['人体に関する','環境に関する','封じ込め方法']; ?>
+      <? for (var ci = 0; ci < spillCats.length; ci++) { ?>
+      <?   var cat = spillCats[ci]; ?>
+      <?   var items = data.spillResponses.filter(function(r){ return r['カテゴリ'] === cat; }); ?>
+      <? if (items.length > 0) { ?>
+      <div class="category-label">【<?= cat ?>】</div>
+      <ul>
+        <? for (var i = 0; i < items.length; i++) { ?>
+        <li><?= items[i]['内容'] ?></li>
+        <? } ?>
+      </ul>
+      <? } } ?>
+    </div>
+  </div>
+
+  <!-- 規制情報 -->
+  <div class="step">
+    <div class="step-header">規制・管理情報</div>
+    <div class="step-body">
+      <table>
+        <tr>
+          <th>特化則</th><th>有機則</th><th>鉛中毒予防則</th><th>記録保存</th>
+        </tr>
+        <tr>
+          <td style="text-align:center"><?= data.material['特化則']  || '―' ?></td>
+          <td style="text-align:center"><?= data.material['有機則']  || '―' ?></td>
+          <td style="text-align:center"><?= data.material['鉛中毒']  || '―' ?></td>
+          <td style="text-align:center"><?= data.material['記録保存'] || '―' ?></td>
+        </tr>
+      </table>
+    </div>
+  </div>
+</div>
+
+<script>
+// ============================================================
+// GHS アイコン描画
+// GHSアイコン画像は Google Drive に公開してURLをここに設定する
+// ============================================================
+// GHSアイコン画像URL（Google Drive のファイルIDを設定）
+// 設定方法: Drive でファイルを右クリック →「共有」→「リンクをコピー」
+//           URLの中の /d/XXXXXXXX/view の XXXXXXXX 部分がファイルID
+const GHS_IMAGE_IDS = {
+  GHS_可燃:  'https://drive.google.com/file/d/1Favhb1bHxeJWUnTvciGY9zi6cHVS1njg/view?usp=drive_link', // flame
+  GHS_支燃:  'https://drive.google.com/file/d/1TY-oJv3bX39o1bQ22N-wbvquviKw5-lH/view?usp=drive_link', // oxidizer
+  GHS_爆発:  'https://drive.google.com/file/d/10aIntelf0sNfEl53DtJ1K14EERU35Wkb/view?usp=drive_link', // explosion
+  GHS_腐食:  'https://drive.google.com/file/d/1gZCsrJ1e6VxLR-0mLH_8H0raFPmZkJ2p/view?usp=drive_link', // corrosive
+  GHS_ガス:  'https://drive.google.com/file/d/1UGjTbzgx7EMvSO2sKoJPSPi8EwzPFAol/view?usp=drive_link', // gas_cylinder
+  GHS_毒性1: 'https://drive.google.com/file/d/1A-XtOEIGYQEt2zGNgB8irYF_-S45a0lM/view?usp=drive_link', // skull
+  GHS_毒性2: 'https://drive.google.com/file/d/1y3he2DP-rgy2yXBo5g-MPuPrm_rOD83n/view?usp=drive_link', // exclamation
+  GHS_環境:  'https://drive.google.com/file/d/1LWjeEBez6vGQH27EimS1Kc-sDN19CkMR/view?usp=drive_link', // environment
+  GHS_臓器:  'https://drive.google.com/file/d/1rZyP7XEqKE7JyS1VSH6RcQ7_CM5VvCuh/view?usp=drive_link', // health_hazard
+};
+
+const GHS_FLAGS = {
+  GHS_可燃:  '可燃性/引火性',
+  GHS_支燃:  '支燃性/酸化性',
+  GHS_爆発:  '爆発性',
+  GHS_腐食:  '腐食性',
+  GHS_ガス:  '高圧ガス',
+  GHS_毒性1: '急性毒性（区分1〜3）',
+  GHS_毒性2: '急性毒性（区分4）/刺激性',
+  GHS_環境:  '水性環境有害性',
+  GHS_臓器:  '臓器毒性/発がん性',
+};
+
+const material = <?!= JSON.stringify(data.material) ?>;
+
+(function renderGhs() {
+  const row = document.getElementById('ghsRow');
+  Object.entries(GHS_FLAGS).forEach(([flag, label]) => {
+    const isOn = material[flag] && String(material[flag]).trim() !== '';
+    const id   = GHS_IMAGE_IDS[flag];
+    const div  = document.createElement('div');
+    div.className = 'ghs-icon' + (isOn ? '' : ' off');
+    div.innerHTML = id
+      ? `<img src="https://drive.google.com/uc?export=view&id=${id}" alt="${label}"><div>${label}</div>`
+      : `<div style="width:16mm;height:16mm;border:1px solid #999;display:flex;align-items:center;justify-content:center;font-size:8px;text-align:center">${label}</div>`;
+    row.appendChild(div);
+  });
+})();
+</script>
+
+</body>
+</html>

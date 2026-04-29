@@ -1,0 +1,10 @@
+node_modules/
+data/
+docs/
+scripts/
+tsconfig.json
+package.json
+package-lock.json
+.gitignore
+SPEC.md
+PROGRESS.md

@@ -1,0 +1,20 @@
+# clasp（scriptIdを含むため除外）
+.clasp.json
+
+# OAuth認証情報（絶対にコミットしない）
+scripts/credentials.json
+scripts/token.json
+
+# Node
+node_modules/
+
+# データファイル（大容量・機密情報を含む可能性があるためGit除外）
+data/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/

@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SDS リスクアセスメントツール</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'Meiryo', sans-serif; background: #f5f5f5; color: #333; }
+
+    header {
+      background: #1a56a0; color: #fff;
+      padding: 12px 24px;
+      font-size: 16px; font-weight: bold;
+    }
+
+    main { max-width: 800px; margin: 32px auto; padding: 0 16px; }
+
+    .card {
+      background: #fff; border-radius: 6px;
+      box-shadow: 0 1px 4px rgba(0,0,0,.12);
+      padding: 24px; margin-bottom: 20px;
+    }
+
+    .card h2 { font-size: 14px; color: #555; margin-bottom: 12px; }
+
+    .search-row { display: flex; gap: 8px; }
+    .search-row input {
+      flex: 1; padding: 8px 12px; font-size: 15px;
+      border: 1px solid #ccc; border-radius: 4px;
+    }
+    .search-row button, .btn {
+      padding: 8px 20px; font-size: 14px; cursor: pointer;
+      background: #1a56a0; color: #fff;
+      border: none; border-radius: 4px;
+    }
+    .btn:disabled { background: #aaa; cursor: default; }
+    .btn-outline {
+      background: #fff; color: #1a56a0;
+      border: 1px solid #1a56a0;
+    }
+
+    #results { margin-top: 12px; }
+    .result-item {
+      padding: 10px 12px; border-bottom: 1px solid #eee;
+      cursor: pointer; font-size: 14px;
+      display: flex; align-items: center; gap: 8px;
+    }
+    .result-item:hover { background: #f0f6ff; }
+    .result-item.selected { background: #ddeeff; font-weight: bold; }
+    .badge {
+      font-size: 11px; background: #e8e8e8;
+      border-radius: 3px; padding: 1px 6px;
+      min-width: 24px; text-align: center;
+    }
+
+    .form-row { display: flex; gap: 16px; flex-wrap: wrap; margin-bottom: 12px; }
+    .form-group { display: flex; flex-direction: column; gap: 4px; flex: 1; min-width: 180px; }
+    .form-group label { font-size: 12px; color: #666; }
+    .form-group input {
+      padding: 8px; font-size: 14px;
+      border: 1px solid #ccc; border-radius: 4px;
+    }
+
+    .selected-name {
+      font-size: 15px; font-weight: bold; color: #1a56a0;
+      background: #f0f6ff; border-radius: 4px;
+      padding: 10px 12px; margin-bottom: 16px;
+    }
+    .hidden { display: none; }
+    #status { font-size: 13px; color: #888; margin-top: 8px; }
+  </style>
+</head>
+<body>
+
+<header>SDS リスクアセスメントツール</header>
+
+<main>
+  <div class="card">
+    <h2>材料を検索</h2>
+    <div class="search-row">
+      <input type="text" id="searchInput" placeholder="材料名を入力（例：ファインウレタン）" />
+      <button onclick="search()">検索</button>
+    </div>
+    <div id="status"></div>
+    <div id="results"></div>
+  </div>
+
+  <div class="card hidden" id="pdfCard">
+    <h2>PDF生成</h2>
+    <div class="selected-name" id="selectedName"></div>
+    <div class="form-row">
+      <div class="form-group">
+        <label>実施者</label>
+        <input type="text" id="implementor" placeholder="氏名を入力" />
+      </div>
+      <div class="form-group">
+        <label>実施日</label>
+        <input type="date" id="date" />
+      </div>
+    </div>
+    <button class="btn" onclick="openReport()">PDF生成（印刷画面を開く）</button>
+  </div>
+</main>
+
+<script>
+  let selectedId   = null;
+  let scriptUrl    = '';
+
+  // スクリプトURLを取得（初回のみ）
+  google.script.run
+    .withSuccessHandler(url => { scriptUrl = url; })
+    .getScriptUrl();
+
+  // 今日の日付をデフォルトにセット
+  document.getElementById('date').value = new Date().toISOString().slice(0, 10);
+
+  // Enterキーで検索
+  document.getElementById('searchInput').addEventListener('keydown', e => {
+    if (e.key === 'Enter') search();
+  });
+
+  function search() {
+    const q = document.getElementById('searchInput').value.trim();
+    if (!q) return;
+    document.getElementById('status').textContent = '検索中...';
+    document.getElementById('results').innerHTML = '';
+    hidePdfCard();
+
+    google.script.run
+      .withSuccessHandler(renderResults)
+      .withFailureHandler(err => {
+        document.getElementById('status').textContent = 'エラー: ' + err.message;
+      })
+      .searchMaterials(q);
+  }
+
+  function renderResults(items) {
+    const status  = document.getElementById('status');
+    const results = document.getElementById('results');
+
+    if (!items || items.length === 0) {
+      status.textContent = '該当する材料が見つかりませんでした';
+      return;
+    }
+    status.textContent = `${items.length}件見つかりました`;
+
+    results.innerHTML = items.map(item => `
+      <div class="result-item" onclick="select(${item.material_id}, '${escHtml(item.材料名)}')">
+        <span class="badge">${escHtml(item.頭文字 || '')}</span>
+        ${escHtml(item.材料名)}
+      </div>
+    `).join('');
+  }
+
+  function select(id, name) {
+    selectedId = id;
+    document.querySelectorAll('.result-item').forEach(el => el.classList.remove('selected'));
+    event.currentTarget.classList.add('selected');
+    document.getElementById('selectedName').textContent = name;
+    document.getElementById('pdfCard').classList.remove('hidden');
+    document.getElementById('pdfCard').scrollIntoView({ behavior: 'smooth' });
+  }
+
+  function hidePdfCard() {
+    selectedId = null;
+    document.getElementById('pdfCard').classList.add('hidden');
+  }
+
+  function openReport() {
+    if (!selectedId) return;
+    const implementor = document.getElementById('implementor').value;
+    const date        = document.getElementById('date').value;
+    if (!implementor) { alert('実施者を入力してください'); return; }
+    if (!date)        { alert('実施日を入力してください'); return; }
+    const url = `${scriptUrl}?page=report&id=${selectedId}`
+      + `&implementor=${encodeURIComponent(implementor)}`
+      + `&date=${encodeURIComponent(date)}`;
+    window.open(url, '_blank');
+  }
+
+  function escHtml(str) {
+    return String(str)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;');
+  }
+</script>
+
+</body>
+</html>
